@@ -25,13 +25,20 @@ pid_t	fork_and_exec(t_cmd *cmd, t_pipe_ctx *ctx, int i, t_data *data)
 		perror("fork");
 		return (-1);
 	}
-	if (pid == 0)
+    if (pid == 0)
 	{
 		setup_child_pipes(ctx->pipefds, i, ctx->num_cmds);
 		close_all_pipes(ctx->pipefds, 2 * (ctx->num_cmds - 1));
-		if (cmd->redirs && apply_redirections_child(cmd, data) != 0)
-			exit(1);
-		if (is_builtin_name(cmd->argv[0]))
+        /* Handle commands that have only redirections (e.g., heredoc-only) */
+        if (!cmd->argv || !cmd->argv[0])
+        {
+            if (cmd->redirs && apply_redirections_child(cmd, data) != 0)
+                exit(1);
+            exit(0);
+        }
+        if (cmd->redirs && apply_redirections_child(cmd, data) != 0)
+            exit(1);
+        if (is_builtin_name(cmd->argv[0]))
 			exit(handle_builtin(cmd->argv, ctx->data));
 		exec_child_command(cmd, ctx->data);
 		perror("exec");
